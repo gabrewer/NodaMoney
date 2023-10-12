@@ -32,7 +32,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118" PrivateAssets="All" />
-    <PackageReference Include="Text.Analyzers" Version="3.3.4">
+    <PackageReference Include="Text.Analyzers" Version="3.3.5-beta1.23320.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
