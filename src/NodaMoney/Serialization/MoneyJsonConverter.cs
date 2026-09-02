@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using NodaMoney.Context;
 
 namespace NodaMoney.Serialization;
 
@@ -12,6 +13,21 @@ public class MoneyJsonConverter : JsonConverter<Money>
 #pragma warning restore CA1704
 {
     const string InvalidFormatMessage = "Invalid format for Money. Expected format is '<Currency> <Amount>', like 'EUR 234.25'.";
+
+    readonly MoneyContext? _context;
+
+    /// <summary>Initializes a new instance of the <see cref="MoneyJsonConverter"/> class that applies the
+    /// <see cref="MoneyContext"/> that is current at deserialization time.</summary>
+    /// <remarks>This is the constructor that <see cref="JsonConverterAttribute"/> uses, so it must stay parameterless.</remarks>
+    public MoneyJsonConverter() { }
+
+    /// <summary>Initializes a new instance of the <see cref="MoneyJsonConverter"/> class that applies the given
+    /// <see cref="MoneyContext"/> to deserialized values.</summary>
+    /// <param name="context">The <see cref="MoneyContext"/> to apply to deserialized values.</param>
+    /// <remarks>Register an instance in <see cref="JsonSerializerOptions.Converters"/> to keep the exact serialized
+    /// amount, by giving it a context with the <see cref="NoRounding"/> strategy. Create the context once and reuse it,
+    /// because creating one scans the registered contexts for an equivalent set of options.</remarks>
+    public MoneyJsonConverter(MoneyContext context) => _context = context;
 
     /// <inheritdoc />
     public override bool CanConvert(Type typeToConvert) =>
@@ -38,7 +54,7 @@ public class MoneyJsonConverter : JsonConverter<Money>
     /// <returns>A <see cref="Money"/> object representing the parsed currency and amount.</returns>
     /// <exception cref="JsonException">Thrown when the JSON string is null, empty, or in an invalid format not adhering to 'Currency Amount'.</exception>
     /// <remarks>This is the new serialization format from v2 and up, like: "EUR 234.25" (or "234.25 EUR")</remarks>
-    static Money ParseMoneyFromString(ref Utf8JsonReader reader)
+    Money ParseMoneyFromString(ref Utf8JsonReader reader)
     {
         // TODO: serialize non-ISO-4217 currencies with same code as ISO-4217 currencies, like "XXX;NON-ISO 234.25" or something else?
         // TODO: code is now overall unique, so no need for non-ISO-4217 indicator
@@ -70,9 +86,9 @@ public class MoneyJsonConverter : JsonConverter<Money>
             if (decimal.TryParse(amountSpan.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal amount))
 #endif
             {
-                // Use the ambient context, so a deserialized value behaves like a constructed one.
+                // Use the configured context, or the ambient one, so a deserialized value behaves like a constructed one.
                 CurrencyInfo currencyInfo = CurrencyInfo.FromCode(currencySpan.ToString());
-                return new Money(amount, currencyInfo);
+                return new Money(amount, currencyInfo, _context);
             }
 
             // Retry using reverse format, like '234.25 EUR'
@@ -82,9 +98,9 @@ public class MoneyJsonConverter : JsonConverter<Money>
             if (decimal.TryParse(currencySpan.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out amount))
 #endif
             {
-                // Use the ambient context, so a deserialized value behaves like a constructed one.
+                // Use the configured context, or the ambient one, so a deserialized value behaves like a constructed one.
                 CurrencyInfo currencyInfo = CurrencyInfo.FromCode(amountSpan.ToString());
-                return new Money(amount, currencyInfo);
+                return new Money(amount, currencyInfo, _context);
             }
 
             throw new JsonException(InvalidFormatMessage);
@@ -101,7 +117,7 @@ public class MoneyJsonConverter : JsonConverter<Money>
     /// <exception cref="JsonException">Thrown if the JSON is invalid, or if required properties such as 'Amount' or 'Currency' are missing.</exception>
     /// <remarks>This is the old serialization format used in v1, like: { "Amount": 234.25, "Currency": "EUR" }.</remarks>
 #pragma warning disable CA1704
-    static Money ParseMoneyFromJsonObject(ref Utf8JsonReader reader)
+    Money ParseMoneyFromJsonObject(ref Utf8JsonReader reader)
 #pragma warning restore CA1704
     {
         decimal amount = 0;
@@ -117,7 +133,7 @@ public class MoneyJsonConverter : JsonConverter<Money>
                 case JsonTokenType.EndObject when !hasCurrency:
                     throw new JsonException("Missing property 'Currency'!");
                 case JsonTokenType.EndObject:
-                    return new Money(amount, currency);
+                    return new Money(amount, currency, _context);
                 case JsonTokenType.PropertyName:
                     string? propertyName = reader.GetString();
                     reader.Read();

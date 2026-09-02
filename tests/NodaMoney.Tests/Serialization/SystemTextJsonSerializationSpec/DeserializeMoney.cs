@@ -1,5 +1,6 @@
 using System.Text.Json;
 using NodaMoney.Context;
+using NodaMoney.Serialization;
 
 namespace NodaMoney.Tests.Serialization.SystemTextJsonSerializationSpec;
 
@@ -118,5 +119,49 @@ public class DeserializeMoney
 
         // Assert
         result.Should().Be(constructed * 0.1234m);
+    }
+
+    [Fact]
+    public void WhenConverterHasNoRoundingContext_ThenAmountShouldKeepAllDecimals()
+    {
+        // Arrange
+        var noRounding = MoneyContext.Create(opt => opt.RoundingStrategy = new NoRounding());
+        JsonSerializerOptions options = new() { Converters = { new MoneyJsonConverter(noRounding) } };
+
+        // Act
+        var clone = JsonSerializer.Deserialize<Money>("\"EUR 123.456\"", options);
+
+        // Assert
+        clone.Amount.Should().Be(123.456m);
+        clone.Context.Should().Be(noRounding);
+    }
+
+    [Fact]
+    public void WhenConverterHasNoRoundingContext_ThenSerializingShouldBeUnchanged()
+    {
+        // Arrange
+        var noRounding = MoneyContext.Create(opt => opt.RoundingStrategy = new NoRounding());
+        JsonSerializerOptions options = new() { Converters = { new MoneyJsonConverter(noRounding) } };
+        var money = new Money(765.4321m, CurrencyInfo.FromCode("EUR"));
+
+        // Act
+        var json = JsonSerializer.Serialize(money, options);
+
+        // Assert
+        json.Should().Be(JsonSerializer.Serialize(money));
+    }
+
+    [Fact]
+    public void WhenConverterHasNoContext_ThenAmountShouldBeRoundedByCurrentContext()
+    {
+        // Arrange
+        JsonSerializerOptions options = new() { Converters = { new MoneyJsonConverter() } };
+
+        // Act
+        var clone = JsonSerializer.Deserialize<Money>("\"EUR 123.456\"", options);
+
+        // Assert
+        clone.Amount.Should().Be(123.46m);
+        clone.Context.Should().Be(MoneyContext.CurrentContext);
     }
 }
