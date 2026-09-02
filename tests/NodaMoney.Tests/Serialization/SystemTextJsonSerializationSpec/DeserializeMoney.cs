@@ -1,4 +1,5 @@
 using System.Text.Json;
+using NodaMoney.Context;
 
 namespace NodaMoney.Tests.Serialization.SystemTextJsonSerializationSpec;
 
@@ -75,5 +76,47 @@ public class DeserializeMoney
         // Assert
         deserialized.Should().BeEquivalentTo(order);
         deserialized.Total.Should().BeNull();
+    }
+
+    [Fact]
+    public void WhenDeserializingV2WithMoreDecimals_ThenAmountShouldBeRoundedByCurrentContext()
+    {
+        // Arrange
+        string json = "\"EUR 123.456\"";
+
+        // Act
+        var clone = JsonSerializer.Deserialize<Money>(json);
+
+        // Assert
+        clone.Amount.Should().Be(123.46m);
+        clone.Context.Should().Be(MoneyContext.CurrentContext);
+    }
+
+    [Fact]
+    public void WhenAddingDeserializedToConstructedMoney_ThenThisShouldNotThrow()
+    {
+        // Arrange
+        var constructed = new Money(10, "EUR");
+        var deserialized = JsonSerializer.Deserialize<Money>("\"EUR 10.00\"");
+
+        // Act
+        Action action = () => _ = constructed + deserialized;
+
+        // Assert
+        action.Should().NotThrow();
+    }
+
+    [Fact]
+    public void WhenMultiplyingDeserializedMoney_ThenResultShouldMatchConstructedMoney()
+    {
+        // Arrange
+        var constructed = new Money(10, "EUR");
+        var deserialized = JsonSerializer.Deserialize<Money>("\"EUR 10.00\"");
+
+        // Act
+        var result = deserialized * 0.1234m;
+
+        // Assert
+        result.Should().Be(constructed * 0.1234m);
     }
 }

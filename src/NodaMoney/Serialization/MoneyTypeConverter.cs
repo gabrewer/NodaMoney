@@ -1,7 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.Serialization;
-using NodaMoney.Context;
 
 namespace NodaMoney.Serialization;
 
@@ -46,7 +45,7 @@ public class MoneyTypeConverter : TypeConverter
 #endif
             {
                 CurrencyInfo currencyInfo = CurrencyInfo.FromCode(currencySpan.ToString());
-                return new Money(amount, currencyInfo, MoneyContext.NoRounding);
+                return new Money(amount, currencyInfo);
             }
 
             // try reverse: 234.25 EUR
@@ -57,7 +56,7 @@ public class MoneyTypeConverter : TypeConverter
 #endif
             {
                 CurrencyInfo currencyInfo = CurrencyInfo.FromCode(amountSpan.ToString());
-                return new Money(amount, currencyInfo, MoneyContext.NoRounding);
+                return new Money(amount, currencyInfo);
             }
 
             throw new SerializationException(InvalidFormatMessage);

@@ -2,7 +2,6 @@ using System.Buffers;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using NodaMoney.Context;
 
 namespace NodaMoney.Serialization;
 
@@ -71,9 +70,9 @@ public class MoneyJsonConverter : JsonConverter<Money>
             if (decimal.TryParse(amountSpan.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal amount))
 #endif
             {
-                // No rounding, because we are deserializing the exact state that was serialized.
+                // Use the ambient context, so a deserialized value behaves like a constructed one.
                 CurrencyInfo currencyInfo = CurrencyInfo.FromCode(currencySpan.ToString());
-                return new Money(amount, currencyInfo, MoneyContext.NoRounding);
+                return new Money(amount, currencyInfo);
             }
 
             // Retry using reverse format, like '234.25 EUR'
@@ -83,9 +82,9 @@ public class MoneyJsonConverter : JsonConverter<Money>
             if (decimal.TryParse(currencySpan.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out amount))
 #endif
             {
-                // No rounding, because we are deserializing the exact state that was serialized.
+                // Use the ambient context, so a deserialized value behaves like a constructed one.
                 CurrencyInfo currencyInfo = CurrencyInfo.FromCode(amountSpan.ToString());
-                return new Money(amount, currencyInfo, MoneyContext.NoRounding);
+                return new Money(amount, currencyInfo);
             }
 
             throw new JsonException(InvalidFormatMessage);
@@ -118,7 +117,7 @@ public class MoneyJsonConverter : JsonConverter<Money>
                 case JsonTokenType.EndObject when !hasCurrency:
                     throw new JsonException("Missing property 'Currency'!");
                 case JsonTokenType.EndObject:
-                    return new Money(amount, currency, MoneyContext.NoRounding);
+                    return new Money(amount, currency);
                 case JsonTokenType.PropertyName:
                     string? propertyName = reader.GetString();
                     reader.Read();

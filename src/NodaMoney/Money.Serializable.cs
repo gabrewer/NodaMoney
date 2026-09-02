@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.Serialization;
 using System.Xml;
@@ -69,8 +69,9 @@ public partial struct Money : IXmlSerializable, ISerializable
         Currency = (Currency)(currencyTypeConverter.ConvertFromString(currency) ??
                               new SerializationException("Member 'Currency' could not be converted from string to Currency."));
 
-        // No rounding, because we are deserializing the exact state that was serialized.
-        ContextIndex = MoneyContext.NoRounding.Index;
+        // Use the ambient context, so a deserialized value behaves like a constructed one. The index must be set
+        // before the amount, because the Amount init accessor reads Context to pick its rounding strategy.
+        ContextIndex = MoneyContext.CurrentContext.Index;
         Amount = amount;
     }
 #pragma warning restore CA1801 // Parameter context of method.ctor is never used.

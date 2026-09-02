@@ -43,17 +43,18 @@ public class DeserializeMoney
     }
 
     [Fact]
-    public void WhenDeserializingV2_ShouldBeOk()
+    public void WhenDeserializingV2WithMoreDecimals_ThenAmountShouldBeRoundedByCurrentContext()
     {
         // Arrange
         string json = "\"EUR 123.456\"";
-        var expected = new Money(123.456m, CurrencyInfo.FromCode("EUR"), MoneyContext.NoRounding);
+        var expected = new Money(123.46m, CurrencyInfo.FromCode("EUR"));
 
         // Act
         var clone = JsonConvert.DeserializeObject<Money>(json);
 
         // Assert
         clone.Should().Be(expected);
+        clone.Context.Should().Be(MoneyContext.CurrentContext);
     }
 
 
