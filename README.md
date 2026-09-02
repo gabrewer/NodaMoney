@@ -470,6 +470,29 @@ using (MoneyContext.CreateScope(myOwnContext))
 }
 ```
 
+Deserializing money uses the MoneyContext that is current at that moment, so a deserialized value behaves like one you
+constructed yourself. This holds for System.Text.Json, Newtonsoft.Json, XML, DataContractSerializer and BinaryFormatter.
+An amount with more decimals than the context allows is rounded, the same way `Money.Parse` rounds it:
+
+```csharp
+// "EUR 123.456" becomes EUR 123.46 with the current context, not EUR 123.456 with no rounding
+Money money = JsonSerializer.Deserialize<Money>("\"EUR 123.456\"");
+
+// To keep the exact serialized amount, deserialize inside a scope that doesn't round. This works for every serializer:
+MoneyContext exactContext = MoneyContext.Create(opt => opt.RoundingStrategy = new NoRounding());
+using (MoneyContext.CreateScope(exactContext))
+{
+    Money exact = JsonSerializer.Deserialize<Money>("\"EUR 123.456\""); // EUR 123.456
+}
+
+// For System.Text.Json you can also configure the converter once and register it:
+JsonSerializerOptions options = new() { Converters = { new MoneyJsonConverter(exactContext) } };
+Money alsoExact = JsonSerializer.Deserialize<Money>("\"EUR 123.456\"", options); // EUR 123.456
+```
+
+Note that `deserialized with { Context = ... }` only relabels the context, it doesn't restore lost decimals: the amount
+was already rounded while reading. Set the context before deserializing, not after.
+
 Use MoneyContext with Dependency Injection (Nuget: NodaMoney.DependencyInjection):
 
 ```csharp

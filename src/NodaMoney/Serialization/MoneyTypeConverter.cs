@@ -5,7 +5,9 @@ using System.Runtime.Serialization;
 namespace NodaMoney.Serialization;
 
 /// <summary>Provides a way of converting the type <see cref="string"/> to and from the type <see cref="Money"/>.</summary>
-/// <remarks>Used by Newtonsoft.Json for JSON Strings to do the serialization.</remarks>
+/// <remarks>Used by Newtonsoft.Json for JSON Strings to do the serialization. Converted values use the
+/// <see cref="Context.MoneyContext"/> that is current at conversion time, so an amount with more decimals than that
+/// context allows is rounded. To keep the exact amount, convert inside a scope that doesn't round.</remarks>
 public class MoneyTypeConverter : TypeConverter
 {
     const string InvalidFormatMessage = "Invalid format for Money. Expected format is '<Currency> <Amount>', like 'EUR 234.25'.";

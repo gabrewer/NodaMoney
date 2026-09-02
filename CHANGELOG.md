@@ -10,7 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `GetCurrencyInfo()` extension methods on `CultureInfo` and `RegionInfo` for easy access to `CurrencyInfo`.
 
 ### Changed
--
+- **Breaking**: Deserializing `Money` now uses the current `MoneyContext` instead of a no-rounding context, so a
+  deserialized value behaves like a constructed one in arithmetic https://github.com/RemyDuijkeren/NodaMoney/issues/119.
+  Amounts with more decimals than the currency allows are now rounded while reading. To keep the exact serialized amount,
+  deserialize inside a scope with the `NoRounding` strategy, or register a `MoneyJsonConverter` configured with such a
+  context in `JsonSerializerOptions.Converters`.
 
 ### Removed
 -
