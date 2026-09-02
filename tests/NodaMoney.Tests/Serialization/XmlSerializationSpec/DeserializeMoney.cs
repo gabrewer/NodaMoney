@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using NodaMoney.Context;
 
 namespace NodaMoney.Tests.Serialization.XmlSerializationSpec;
 
@@ -124,5 +125,46 @@ public class DeserializeMoney :  XmlSerializationHelper
         // Assert
         var order = new NullableOrder { Id = 123, Total = default, Name = "Foo" };
         clone.Should().BeEquivalentTo(order);
+    }
+
+    [Fact]
+    public void WhenValidXml_ThenContextShouldBeCurrentContext()
+    {
+        // Arrange
+        string xml = """<Money Currency="EUR">123.456</Money>""";
+
+        // Act
+        Money money = DeserializeFromXml<Money>(xml);
+
+        // Assert
+        money.Amount.Should().Be(123.46m);
+        money.Context.Should().Be(MoneyContext.CurrentContext);
+    }
+
+    [Fact]
+    public void WhenValidXmlV1Format_ThenContextShouldBeCurrentContext()
+    {
+        // Arrange
+        string xml = """<Money Amount="765.43" Currency="USD" />""";
+
+        // Act
+        Money money = DeserializeFromXml<Money>(xml);
+
+        // Assert
+        money.Context.Should().Be(MoneyContext.CurrentContext);
+    }
+
+    [Fact]
+    public void WhenAddingDeserializedToConstructedMoney_ThenThisShouldNotThrow()
+    {
+        // Arrange
+        var constructed = new Money(10, "EUR");
+        Money deserialized = DeserializeFromXml<Money>("""<Money Currency="EUR">10.00</Money>""");
+
+        // Act
+        Action action = () => _ = constructed + deserialized;
+
+        // Assert
+        action.Should().NotThrow();
     }
 }

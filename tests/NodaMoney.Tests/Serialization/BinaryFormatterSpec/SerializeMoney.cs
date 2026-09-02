@@ -1,6 +1,7 @@
 using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using NodaMoney.Context;
 
 namespace NodaMoney.Tests.Serialization.BinaryFormatterSpec;
 
@@ -26,7 +27,10 @@ public class SerializeMoney
 #endif
     public void WhenSerializingEuro_ThenThisShouldSucceed()
     {
-        euro.Should().Be(Clone<Money>(euro));
+        Money clone = Clone<Money>(euro);
+
+        clone.Should().Be(euro);
+        clone.Context.Should().Be(MoneyContext.CurrentContext);
     }
 
 #if NET8_0_OR_GREATER

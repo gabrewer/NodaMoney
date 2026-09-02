@@ -1,6 +1,7 @@
 using System.IO;
 using System.Runtime.Serialization;
 using System.Xml;
+using NodaMoney.Context;
 
 namespace NodaMoney.Tests.Serialization.DataContractSerializerSpec;
 
@@ -32,6 +33,31 @@ public class SerializeMoney
         };
 
         article.Total.Should().Be(Clone<Order>(article).Total);
+    }
+
+    [Fact]
+    public void WhenDeserializing_ThenContextShouldBeCurrentContext()
+    {
+        // Arrange
+
+        // Act
+        Money clone = Clone<Money>(euro);
+
+        // Assert
+        clone.Context.Should().Be(MoneyContext.CurrentContext);
+    }
+
+    [Fact]
+    public void WhenAddingDeserializedToConstructedMoney_ThenThisShouldNotThrow()
+    {
+        // Arrange
+        Money clone = Clone<Money>(euro);
+
+        // Act
+        Action action = () => _ = new Money(10, "EUR") + clone;
+
+        // Assert
+        action.Should().NotThrow();
     }
 
     public static Stream Serialize(object source)

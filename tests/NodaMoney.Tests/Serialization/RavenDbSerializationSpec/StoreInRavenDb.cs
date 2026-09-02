@@ -1,4 +1,5 @@
 using System.Linq;
+using NodaMoney.Context;
 using Raven.TestDriver;
 
 namespace NodaMoney.Tests.Serialization.RavenDbSerializationSpec;
@@ -41,6 +42,7 @@ public class StoreInRavenDb : RavenTestDriver
 
             result.Name.Should().Be(sample.Name);
             result.Price.Should().Be(sample.Price);
+            result.Price.Context.Should().Be(MoneyContext.CurrentContext);
         }
     }
 }
