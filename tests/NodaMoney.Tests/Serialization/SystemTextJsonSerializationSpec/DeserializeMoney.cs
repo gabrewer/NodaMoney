@@ -164,4 +164,34 @@ public class DeserializeMoney
         clone.Amount.Should().Be(123.46m);
         clone.Context.Should().Be(MoneyContext.CurrentContext);
     }
+
+    [Fact]
+    public void WhenDeserializingInNoRoundingScope_ThenAmountShouldKeepAllDecimals()
+    {
+        // Arrange
+        var noRounding = MoneyContext.Create(opt => opt.RoundingStrategy = new NoRounding());
+
+        // Act
+        using var scope = MoneyContext.CreateScope(noRounding);
+        var clone = JsonSerializer.Deserialize<Money>("\"EUR 123.456\"");
+
+        // Assert
+        clone.Amount.Should().Be(123.456m);
+        clone.Context.Should().Be(noRounding);
+    }
+
+    [Fact]
+    public void WhenDeserializingInAwayFromZeroScope_ThenAmountShouldBeRoundedByThatScope()
+    {
+        // Arrange
+        var awayFromZero = MoneyContext.Create(opt => opt.RoundingStrategy = new StandardRounding(MidpointRounding.AwayFromZero));
+
+        // Act
+        using var scope = MoneyContext.CreateScope(awayFromZero);
+        var clone = JsonSerializer.Deserialize<Money>("\"EUR 123.455\"");
+
+        // Assert
+        clone.Amount.Should().Be(123.46m);
+        clone.Context.Should().Be(awayFromZero);
+    }
 }
