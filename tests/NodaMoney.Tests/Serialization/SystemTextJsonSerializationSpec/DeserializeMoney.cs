@@ -125,7 +125,7 @@ public class DeserializeMoney
     public void WhenConverterHasNoRoundingContext_ThenAmountShouldKeepAllDecimals()
     {
         // Arrange
-        var noRounding = MoneyContext.Create(opt => opt.RoundingStrategy = new NoRounding());
+        var noRounding = MoneyContext.NoRounding;
         JsonSerializerOptions options = new() { Converters = { new MoneyJsonConverter(noRounding) } };
 
         // Act
@@ -140,7 +140,7 @@ public class DeserializeMoney
     public void WhenConverterHasNoRoundingContext_ThenSerializingShouldBeUnchanged()
     {
         // Arrange
-        var noRounding = MoneyContext.Create(opt => opt.RoundingStrategy = new NoRounding());
+        var noRounding = MoneyContext.NoRounding;
         JsonSerializerOptions options = new() { Converters = { new MoneyJsonConverter(noRounding) } };
         var money = new Money(765.4321m, CurrencyInfo.FromCode("EUR"));
 
@@ -152,24 +152,10 @@ public class DeserializeMoney
     }
 
     [Fact]
-    public void WhenConverterHasNoContext_ThenAmountShouldBeRoundedByCurrentContext()
-    {
-        // Arrange
-        JsonSerializerOptions options = new() { Converters = { new MoneyJsonConverter() } };
-
-        // Act
-        var clone = JsonSerializer.Deserialize<Money>("\"EUR 123.456\"", options);
-
-        // Assert
-        clone.Amount.Should().Be(123.46m);
-        clone.Context.Should().Be(MoneyContext.CurrentContext);
-    }
-
-    [Fact]
     public void WhenDeserializingInNoRoundingScope_ThenAmountShouldKeepAllDecimals()
     {
         // Arrange
-        var noRounding = MoneyContext.Create(opt => opt.RoundingStrategy = new NoRounding());
+        var noRounding = MoneyContext.NoRounding;
 
         // Act
         using var scope = MoneyContext.CreateScope(noRounding);
@@ -193,5 +179,56 @@ public class DeserializeMoney
         // Assert
         clone.Amount.Should().Be(123.46m);
         clone.Context.Should().Be(awayFromZero);
+    }
+
+    [Fact]
+    public void WhenRegisteredConverterAndNullableMoney_ThenValueAndNullShouldBothWork()
+    {
+        // Arrange
+        var noRounding = MoneyContext.NoRounding;
+        JsonSerializerOptions options = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            Converters = { new MoneyJsonConverter(noRounding) }
+        };
+
+        // Act
+        var withValue = JsonSerializer.Deserialize<NullableOrder>("""{"Id":1,"Total":"EUR 1.005","Name":"Foo"}""", options);
+        var withNull = JsonSerializer.Deserialize<NullableOrder>("""{"Id":1,"Total":null,"Name":"Foo"}""", options);
+
+        // Assert
+        withValue.Total!.Value.Amount.Should().Be(1.005m);
+        withValue.Total!.Value.Context.Should().Be(noRounding);
+        withNull.Total.Should().BeNull();
+    }
+
+    [Fact]
+    public void WhenConverterContextIsNull_ThenThisShouldThrow()
+    {
+        // Arrange
+
+        // Act
+        Action action = () => _ = new MoneyJsonConverter(null!);
+
+        // Assert
+        action.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void WhenMixingExactValueWithDefaultContextMoney_ThenThisShouldThrowUntilRealigned()
+    {
+        // Arrange
+        var noRounding = MoneyContext.NoRounding;
+        JsonSerializerOptions options = new() { Converters = { new MoneyJsonConverter(noRounding) } };
+        var exact = JsonSerializer.Deserialize<Money>("\"EUR 123.456\"", options);
+        var constructed = new Money(10, "EUR");
+
+        // Act
+        Action mixing = () => _ = constructed + exact;
+        Money realigned = constructed + (exact with { Context = MoneyContext.CurrentContext });
+
+        // Assert
+        mixing.Should().Throw<MoneyContextMismatchException>();
+        realigned.Amount.Should().Be(133.46m);
     }
 }

@@ -26,20 +26,19 @@ public class MoneyJsonConverter : JsonConverter<Money>
     /// <param name="context">The <see cref="MoneyContext"/> to apply to deserialized values.</param>
     /// <remarks>Register an instance in <see cref="JsonSerializerOptions.Converters"/> to keep the exact serialized
     /// amount, by giving it a context with the <see cref="NoRounding"/> strategy. Create the context once and reuse it,
-    /// because creating one scans the registered contexts for an equivalent set of options.</remarks>
-    public MoneyJsonConverter(MoneyContext context) => _context = context;
-
-    /// <inheritdoc />
-    public override bool CanConvert(Type typeToConvert) =>
-        typeToConvert == typeof(Money) || typeToConvert == typeof(Money?);
+    /// because creating one scans the registered contexts for an equivalent set of options. Values read this way carry
+    /// the given context, so mixing them with money built under the current context throws
+    /// <see cref="MoneyContextMismatchException"/> until they are realigned.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is <value>null</value>.</exception>
+    public MoneyJsonConverter(MoneyContext context) => _context = context ?? throw new ArgumentNullException(nameof(context));
 
     /// <inheritdoc />
     public override Money Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
         reader.TokenType switch
         {
-            JsonTokenType.Null when typeToConvert == typeof(Money) => throw new JsonException(
+            // Only asked to convert Money itself; System.Text.Json handles Money? through its own nullable converter.
+            JsonTokenType.Null => throw new JsonException(
                 "Null value encountered for 'Money' during JSON deserialization. This value is not allowed. Use Money? instead or make sure the JSON value is not null."),
-            JsonTokenType.Null => default, // Will return null for Money?
             JsonTokenType.String => ParseMoneyFromString(ref reader),
             JsonTokenType.StartObject => ParseMoneyFromJsonObject(ref reader),
             _ => throw new JsonException(InvalidFormatMessage)

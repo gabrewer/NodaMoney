@@ -14,7 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   deserialized value behaves like a constructed one in arithmetic https://github.com/RemyDuijkeren/NodaMoney/issues/119.
   Amounts with more decimals than the currency allows are now rounded while reading. To keep the exact serialized amount,
   deserialize inside a scope with the `NoRounding` strategy, or register a `MoneyJsonConverter` configured with such a
-  context in `JsonSerializerOptions.Converters`.
+  context in `JsonSerializerOptions.Converters`. Only System.Text.Json has that per-serializer opt-out; for
+  Newtonsoft.Json, XML, `DataContractSerializer` and `BinaryFormatter` a scope is the only escape, so stored amounts with
+  more decimals than the current context allows now change value when read (`EUR 0.005` reads back as `EUR 0.00`).
 
 ### Removed
 -

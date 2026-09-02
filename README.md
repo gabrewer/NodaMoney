@@ -490,8 +490,20 @@ JsonSerializerOptions options = new() { Converters = { new MoneyJsonConverter(ex
 Money alsoExact = JsonSerializer.Deserialize<Money>("\"EUR 123.456\"", options); // EUR 123.456
 ```
 
-Note that `deserialized with { Context = ... }` only relabels the context, it doesn't restore lost decimals: the amount
-was already rounded while reading. Set the context before deserializing, not after.
+A value read that way carries the exact context, not the current one, so mixing it with normally constructed money
+throws until you realign it:
+
+```csharp
+Money constructed = new Money(10m, "EUR");
+
+var total = constructed + alsoExact; // throws MoneyContextMismatchException
+
+// Realign first. The operation's result is rounded by the target context:
+var total = constructed + (alsoExact with { Context = MoneyContext.CurrentContext }); // EUR 133.46
+```
+
+Note that `with { Context = ... }` only relabels the context, it doesn't restore lost decimals: if the amount was
+already rounded while reading, those decimals are gone. Set the context before deserializing, not after.
 
 Use MoneyContext with Dependency Injection (Nuget: NodaMoney.DependencyInjection):
 
