@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Next]
 
 ### Added
-- `GetCurrencyInfo()` extension methods on `CultureInfo` and `RegionInfo` for easy access to `CurrencyInfo`.
+-
+
+### Changed
+-
+
+### Removed
+-
+
+## [2.8.0]
+
+### Added
+- `GetCurrencyInfo()` extension methods on `CultureInfo` and `RegionInfo` for easy access to `CurrencyInfo`
+  https://github.com/RemyDuijkeren/NodaMoney/issues/32.
+- `Context` is now settable in an object initializer or `with` expression on `Money` and `FastMoney`, so an existing
+  value can be moved to another `MoneyContext` https://github.com/RemyDuijkeren/NodaMoney/issues/120. The stored amount
+  is kept as-is and is not re-rounded, so `money with { Context = noRounding }` reinterprets the value instead of
+  recalculating it. `FastMoney` validates the new context and rejects a `MaxScale` above 4 or a `Precision` above 19.
+- `MoneyJsonConverter` has a constructor taking a `MoneyContext`. Register such an instance in
+  `JsonSerializerOptions.Converters` to control the context that deserialized values get. Create the context once and
+  reuse it, because creating one scans the registered contexts for an equivalent set of options.
 
 ### Changed
 - **Breaking**: Deserializing `Money` now uses the current `MoneyContext` instead of a no-rounding context, so a
@@ -17,11 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   context in `JsonSerializerOptions.Converters`. Only System.Text.Json has that per-serializer opt-out; for
   Newtonsoft.Json, XML, `DataContractSerializer` and `BinaryFormatter` a scope is the only escape, so stored amounts with
   more decimals than the current context allows now change value when read (`EUR 0.005` reads back as `EUR 0.00`).
+- `FastMoney` now validates the currency when it is set in an object initializer or `with` expression, throwing
+  `InvalidCurrencyException` for a currency needing more than 4 decimal places. Previously only the constructor checked.
+- `MoneyJsonConverter` no longer claims `Money?` itself and lets System.Text.Json handle it through its own nullable
+  converter. A JSON `null` read directly as `Money` still throws `JsonException`.
 
-### Removed
--
-
-## [2.7]
+## [2.7.0]
 
 ### Added
 - FromMinorUnits and ToMinorUnits methods on Money and FastMoney https://github.com/RemyDuijkeren/NodaMoney/issues/118.
@@ -37,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - `Currency.IsIso4217` is removed, use `CurrencyInfo.IsIso4217` instead.
 
-## [2.6]
+## [2.6.0]
 
 ### Added
 - Support .NET 10.0
@@ -47,7 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - ISO 4217 AMENDMENT NUMBER 180, Bulgaria will use EUR from 1 January 2026, and BGN will move to the historic list.
 
-## [2.5]
+## [2.5.0]
 
 ### Added
 - Add MoneyContext to configure money behavior like rounding, scale, and precision. This can be specified globally,
@@ -70,7 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed From-methods and numeric casts on Money where constructors exist or are more appropriate, like FromDecimal, FromInt32 FromInt64, etc.
 - Remove Money constructors and factory methods with MidpointRounding param for non-decimal numeric types, like `new Money(double, Currency, MidpointRounding)`.
 
-## [2.3]
+## [2.3.0]
 
 ### Added
 - CurrencyInfo.TryFromCode method to get CurrencyInfo from code without throwing an exception.
@@ -80,7 +100,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Fixed #107 When subtracting from $0, the result is negated
 
-## [2.2]
+## [2.2.0]
 
 ### Added
 - ISO 4217 AMENDMENT NUMBER 179, add new currency XAD for the Finance Department Arab Monetary Fund (AMF)
@@ -111,7 +131,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Removed Microsoft.Bcl.HashCode dependency for .NET Standard 2.0
 
-## [2.1]
+## [2.1.0]
 
 ### Added
 - ISpanFormattable and IUtf8SpanFormattable implemented
@@ -122,7 +142,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename SafeDivide to Split and move in NodaMoney namespace
 - NotNullWhenAttribute is now internal #101
 
-## [2.0]
+## [2.0.0]
 
 ### Added
 - ISO 4217 Amendment Number 170 VED/926

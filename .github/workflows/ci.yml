@@ -3,8 +3,11 @@ name: CI
 
 on:
   push:
-    branches:
-      - '**' # all branches but excludes tags
+    branches: [ master, main ]
+    paths-ignore:
+      - docs/**
+  pull_request:
+    branches: [ master, main ]
     paths-ignore:
       - docs/**
   workflow_call:
@@ -19,13 +22,13 @@ jobs:
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           filter: tree:0
 
       - name: 🛠️ Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             6.0.x
@@ -42,6 +45,8 @@ jobs:
 
       - name: ⚙️ Build
         run: dotnet build -c Release --no-restore
+        env:
+          MINVERBUILDMETADATA: build.${{github.run_id}}.${{github.run_attempt}}
 
       - name: 🚦 Test
         id: test
@@ -52,7 +57,7 @@ jobs:
           dotnet test -f net10.0 -c Release -l "trx;LogFileName=net10.0-tests.trx" --results-directory ./artifacts/ --no-build
 
       - name: 📋 Test reporter
-        uses: dorny/test-reporter@v2
+        uses: dorny/test-reporter@v3
         if: always() && steps.test.outcome != 'skipped'
         with:
           name: unittests
@@ -63,16 +68,6 @@ jobs:
 
       - name: 📦 Pack
         run: dotnet pack -c Release -o ./artifacts/ --no-build
-
-      - name: 📤 Upload Packages
-        uses: actions/upload-artifact@v6
-        with:
-          name: Packages
-          path: |
-            ./artifacts/*.nupkg
-            ./artifacts/*.snupkg
-          if-no-files-found: error
-          retention-days: 10
 
       - name: 🚀 Push to GitHub
         run: |
@@ -86,6 +81,7 @@ jobs:
           package-type: nuget
           min-versions-to-keep: 10
           delete-only-pre-release-versions: true
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🗑️ Delete old pre-release packages NodaMoney.DependencyInjection
         uses: actions/delete-package-versions@v5
@@ -94,3 +90,14 @@ jobs:
           package-type: nuget
           min-versions-to-keep: 10
           delete-only-pre-release-versions: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: ⬆️ Upload packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: Packages
+          path: |
+            ./artifacts/*.nupkg
+            ./artifacts/*.snupkg
+          if-no-files-found: error
+          retention-days: 10

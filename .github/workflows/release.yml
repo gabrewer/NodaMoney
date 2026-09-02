@@ -9,7 +9,11 @@ on:
 
 jobs:
   build:
+    permissions:
+      checks: write
+      packages: write
     uses: ./.github/workflows/ci.yml
+    secrets: inherit
 
   release:
     needs: build
@@ -17,22 +21,49 @@ jobs:
     permissions:
       checks: write
       packages: read
+      contents: write  # create the GitHub Release
+      id-token: write  # enable GitHub OIDC token issuance for NuGet login
 
     steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v7
+
       - name: 🛠️ Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
       - name: 📥 Download Packages
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: Packages
           path: ./pkg/
 
+      - name: 🔑 NuGet login (OIDC → temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: 🚀 Push to NuGet
         run: |
-          dotnet nuget push "./pkg/**/*.nupkg" "./pkg/**/*.snupkg" \
-            --api-key ${{ secrets.NUGET_API_KEY }} \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate
+          dotnet nuget push "./pkg/**/*.nupkg" "./pkg/**/*.snupkg" --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: 📝 Extract release notes from CHANGELOG.md
+        run: |
+          awk -v ver="$GITHUB_REF_NAME" '
+            index($0, "## [" ver "]") == 1 { flag=1; next }   # tolerates a trailing date
+            flag && index($0, "## [") == 1 { flag=0 }
+            flag { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "No CHANGELOG.md section found for [$GITHUB_REF_NAME] — aborting." >&2
+            exit 1
+          fi
+
+      - name: 🏷️ Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: ${{ github.ref_name }}
+          body_path: release-notes.md
+          generate_release_notes: false
