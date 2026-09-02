@@ -49,7 +49,7 @@ jobs:
           dotnet test -f net6.0 -c Release -l "trx;LogFileName=net6.0-tests.trx" --results-directory ./artifacts/ --no-build
           dotnet test -f net8.0 -c Release -l "trx;LogFileName=net8.0-tests.trx" --results-directory ./artifacts/ --no-build
           dotnet test -f net9.0 -c Release -l "trx;LogFileName=net9.0-tests.trx" --results-directory ./artifacts/ --no-build
-          dotnet test -f net10.0 -c Release -l "trx;LogFileName=net9.0-tests.trx" --results-directory ./artifacts/ --no-build
+          dotnet test -f net10.0 -c Release -l "trx;LogFileName=net10.0-tests.trx" --results-directory ./artifacts/ --no-build
 
       - name: 📋 Test reporter
         uses: dorny/test-reporter@v2
